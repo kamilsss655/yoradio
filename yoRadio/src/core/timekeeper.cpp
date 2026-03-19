@@ -75,7 +75,6 @@ TimeKeeper::TimeKeeper(){
 }
 
 bool TimeKeeper::loop0(){ // core0 (display)
-  if (network.status != CONNECTED) return true;
   uint32_t currentTime = millis();
   static uint32_t _last1s = 0;
   static uint32_t _last2s = 0;
@@ -239,7 +238,7 @@ void TimeKeeper::timeTask(){
     tsFailCnt = 0;
     forceTimeSync = false;
     mktime(&network.timeinfo);
-    display.putRequest(CLOCK, 1);
+    display.putRequest(CLOCK);
     network.requestTimeSync(true);
     #if RTCSUPPORTED
       if (config.isRTCFound()) rtc.setTime(&network.timeinfo);

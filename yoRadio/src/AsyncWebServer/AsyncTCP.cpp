@@ -731,7 +731,9 @@ bool AsyncClient::connect(const char* host, uint16_t port){
       return false;
     }
     TCP_MUTEX_LOCK();
+    // LOCK_TCPIP_CORE();  // Add this
     err_t err = dns_gethostbyname(host, &addr, (dns_found_callback)&_tcp_dns_found, this);
+    // UNLOCK_TCPIP_CORE();  // Add this
     TCP_MUTEX_UNLOCK();
     if(err == ERR_OK) {
         return connect(IPAddress(addr.u_addr.ip4.addr), port);

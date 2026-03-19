@@ -217,8 +217,7 @@ static void USE_IRAM_ATTR gpio_intr() {
     else
       params.rawbuf[rawlen] = (now - start) / kRawTick;
   }
-  rawlen++;
-  params.rawlen = rawlen;
+  params.rawlen++;
 
   start = now;
 

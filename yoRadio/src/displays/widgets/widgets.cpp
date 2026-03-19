@@ -234,16 +234,11 @@ void ScrollWidget::_draw() {
     uint16_t _newx = fbl - _x;
     const char* _cursor = _text + _newx / _charWidth;
     uint16_t hiddenChars = _cursor - _text;
-    uint8_t addChars = _fb->ready()?2:1;
     if (hiddenChars < strlen(_text)) {
-    //TODO
-    #pragma GCC diagnostic push
-    #pragma GCC diagnostic ignored "-Wformat-truncation="
-      snprintf(_window, _width / _charWidth + addChars, "%s%s%s", _cursor, _sep, _text);
-    #pragma GCC diagnostic pop
+      snprintf(_window, _width / _charWidth + 1, "%s%s%s", _cursor, _sep, _text);
     } else {
       const char* _scursor = _sep + (_cursor - (_text + strlen(_text)));
-      snprintf(_window, _width / _charWidth + addChars, "%s%s", _scursor, _text);
+      snprintf(_window, _width / _charWidth + 1, "%s%s", _scursor, _text);
     }
     if(_fb->ready()){
     #ifdef PSFBUFFER
@@ -425,18 +420,26 @@ void VuWidget::_draw(){
     #else
       _canvas->fillRect(0, 0, _bands.width-(_bands.width-measL), _bands.width, _bgcolor);
       _canvas->fillRect(_bands.width * 2 + _bands.space - measR, 0, measR, _bands.width, _bgcolor);
+      #if DSP_MODEL!=DSP_ILI9225
       dsp.startWrite();
       dsp.setAddrWindow(_config.left, _config.top, _bands.width * 2 + _bands.space, _bands.height);
       dsp.writePixels((uint16_t*)_canvas->getBuffer(), (_bands.width * 2 + _bands.space)*_bands.height);
       dsp.endWrite();
+      #else
+      dsp.drawRGBBitmap(_config.left, _config.top, _canvas->getBuffer(), _bands.width * 2 + _bands.space, _bands.height);
+      #endif
     #endif
   }else{
     _canvas->fillRect(0, 0, _bands.width, measL, _bgcolor);
     _canvas->fillRect(_bands.width + _bands.space, 0, _bands.width, measR, _bgcolor);
+    #if DSP_MODEL!=DSP_ILI9225
     dsp.startWrite();
     dsp.setAddrWindow(_config.left, _config.top, _bands.width * 2 + _bands.space, _bands.height);
     dsp.writePixels((uint16_t*)_canvas->getBuffer(), (_bands.width * 2 + _bands.space)*_bands.height);
     dsp.endWrite();
+    #else
+    dsp.drawRGBBitmap(_config.left, _config.top, _canvas->getBuffer(), _bands.width * 2 + _bands.space, _bands.height);
+    #endif
   }
 }
 
@@ -496,11 +499,11 @@ void VuWidget::_clear(){ }
 uint16_t _textWidth(const char *txt){
   uint16_t w = 0, l=strlen(txt);
   for(uint16_t c=0;c<l;c++) w+=_charWidth(txt[c]);
-//  #if DSP_MODEL==DSP_ILI9225
-//  return w+l;
-//  #else
+  #if DSP_MODEL==DSP_ILI9225
+  return w+l;
+  #else
   return w;
-//  #endif
+  #endif
 }
 
 /************************
@@ -598,16 +601,12 @@ void ClockWidget::init(WidgetConfig wconf, uint16_t fgcolor, uint16_t bgcolor){
   else if(TIME_SIZE==19 || TIME_SIZE==2) _superfont=1;
   else _superfont=0;
   _space = (5*_superfont)/2; //magick
-  #ifndef HIDE_DATE
   if(_fullclock){
     _dateheight = _superfont<4?1:2;
     _clockheight = _timeheight + _space + CHARHEIGHT * _dateheight;
   } else {
     _clockheight = _timeheight;
   }
-  #else
-    _clockheight = _timeheight;
-  #endif
   _getTimeBounds();
 #ifdef PSFBUFFER
   _fb = new psFrameBuffer(dsp.width(), dsp.height());
@@ -661,14 +660,18 @@ void ClockWidget::_getTimeBounds() {
 }
 
 #ifndef DSP_LCD
-
-Adafruit_GFX& ClockWidget::getRealDsp(){
-#ifdef PSFBUFFER
-  if (_fb && _fb->ready()) return *_fb;
+#if DSP_MODEL==DSP_ILI9225
+  auto& ClockWidget::getRealDsp(){
+    return dsp;
+  }
+#else
+  Adafruit_GFX& ClockWidget::getRealDsp(){
+  #ifdef PSFBUFFER
+    if (_fb && _fb->ready()) return *_fb;
+  #endif
+    return dsp;
+  }
 #endif
-  return dsp;
-}
-
 void ClockWidget::_printClock(bool force){
   auto& gfx = getRealDsp();
   gfx.setTextSize(Clock_GFXfontPtr==nullptr?TIME_SIZE:1);
@@ -703,7 +706,6 @@ void ClockWidget::_printClock(bool force){
         gfx.setTextColor(config.theme.dow, config.theme.background);
         gfx.print(utf8Rus(LANG::dow[network.timeinfo.tm_wday], false));
         sprintf(_tmp, "%2d %s %d", network.timeinfo.tm_mday,LANG::mnths[network.timeinfo.tm_mon], network.timeinfo.tm_year+1900);
-        #ifndef HIDE_DATE
         strlcpy(_datebuf, utf8Rus(_tmp, true), sizeof(_datebuf));
         uint16_t _datewidth = strlen(_datebuf) * CHARWIDTH*_dateheight;
         gfx.setTextSize(_dateheight);
@@ -714,7 +716,6 @@ void ClockWidget::_printClock(bool force){
         #endif
         gfx.setTextColor(config.theme.date, config.theme.background);
         gfx.print(_datebuf);
-        #endif
       }
     }
   }
@@ -763,9 +764,9 @@ void ClockWidget::_clearClock(){
 #endif
 }
 
-void ClockWidget::draw(bool force){
+void ClockWidget::draw(){
   if(!_active) return;
-  _printClock(_getTime() || force);
+  _printClock(_getTime());
 }
 
 void ClockWidget::_draw(){
@@ -800,7 +801,7 @@ void ClockWidget::_printClock(bool force){
 
 void ClockWidget::_clearClock(){}
 
-void ClockWidget::draw(bool force){
+void ClockWidget::draw(){
   if(!_active) return;
   _printClock(true);
 }
@@ -948,6 +949,7 @@ void PlayListWidget::_printPLitem(uint8_t pos, const char* item){
     dsp.setTextColor(config.theme.playlist[plColor], config.theme.background);
     dsp.setCursor(TFT_FRAMEWDT, _plYStart + pos * _plItemHeight);
     dsp.fillRect(0, _plYStart + pos * _plItemHeight - 1, dsp.width(), _plItemHeight - 2, config.theme.background);
+    Serial.println(item);
     dsp.print(utf8Rus(item, true));
   }
 }

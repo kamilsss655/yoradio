@@ -5,13 +5,13 @@
 #include "mqtt.h"
 #include "WiFi.h"
 #include "player.h"
-#include "commandhandler.h"
 
 AsyncMqttClient mqttClient;
 TimerHandle_t mqttReconnectTimer;
-char topic[100], status[BUFLEN*2];
+char topic[100], status[BUFLEN+50];
 
 void connectToMqtt() {
+  //config.waitConnection();
   mqttClient.connect();
 }
 
@@ -44,8 +44,7 @@ void mqttPublishStatus() {
     char title[BUFLEN/2];
     config.escapeQuotes(config.station.name, name, sizeof(name)-10);
     config.escapeQuotes(config.station.title, title, sizeof(title)-10);
-    sprintf(status, "{\"status\": %d, \"station\": %d, \"name\": \"%s\", \"title\": \"%s\", \"on\": %d}", 
-            player.status()==PLAYING?1:0, config.lastStation(), name, title, config.store.dspon);
+    sprintf(status, "{\"status\": %d, \"station\": %d, \"name\": \"%s\", \"title\": \"%s\", \"on\": %d}", player.status()==PLAYING?1:0, config.lastStation(), name, title, config.store.dspon);
     mqttClient.publish(topic, 0, true, status);
   }
 }
@@ -82,7 +81,20 @@ void onMqttMessage(char* topic, char* payload, AsyncMqttClientMessageProperties 
     char buf[len+1];
     strncpy(buf, payload, len);
     buf[len]='\0';
-    if(cmd.exec(buf, "")) return;
+    if (strcmp(buf, "prev") == 0) { player.sendCommand({PR_PREV, 0}); return; }
+    if (strcmp(buf, "next") == 0) { player.sendCommand({PR_NEXT, 0}); return; }
+    if (strcmp(buf, "toggle") == 0) { player.sendCommand({PR_TOGGLE, 0}); return; }
+    if (strcmp(buf, "stop") == 0) { player.sendCommand({PR_STOP, 0}); return; }
+    if (strcmp(buf, "start") == 0 || strcmp(buf, "play") == 0) { player.sendCommand({PR_PLAY, config.lastStation()}); return; }
+    if (strcmp(buf, "boot") == 0 || strcmp(buf, "reboot") == 0) { ESP.restart(); return; }
+    if (strcmp(buf, "volm") == 0) {
+      player.stepVol(false);
+      return;
+    }
+    if (strcmp(buf, "volp") == 0) {
+      player.stepVol(true);
+      return;
+    }
     if (strcmp(buf, "turnoff") == 0) {
       uint8_t sst = config.store.smartstart;
       config.setDspOn(0);

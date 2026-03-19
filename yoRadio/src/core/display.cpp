@@ -73,8 +73,7 @@ DspCore dsp;
 
 Page *pages[] = { new Page(), new Page(), new Page(), new Page() };
 
-#if !((DSP_MODEL==DSP_ST7735 && DTYPE==INITR_BLACKTAB) || DSP_MODEL==DSP_ST7789 || DSP_MODEL==DSP_ST7796 || DSP_MODEL==DSP_ILI9488 \
- || DSP_MODEL==DSP_ILI9486 || DSP_MODEL==DSP_ILI9341 || DSP_MODEL==DSP_ILI9225 || DSP_MODEL==DSP_ST7789_170)
+#if !((DSP_MODEL==DSP_ST7735 && DTYPE==INITR_BLACKTAB) || DSP_MODEL==DSP_ST7789 || DSP_MODEL==DSP_ST7796 || DSP_MODEL==DSP_ILI9488 || DSP_MODEL==DSP_ILI9486 || DSP_MODEL==DSP_ILI9341 || DSP_MODEL==DSP_ILI9225)
   #undef  BITRATE_FULL
   #define BITRATE_FULL     false
 #endif
@@ -457,9 +456,9 @@ void Display::loop() {
     if(pm_result)
       switch (request.type){
         case NEWMODE: _swichMode((displayMode_e)request.payload); break;
-        case CLOSEPLAYLIST: player.sendCommand({PR_PLAY, request.payload}); break;
+        case CLOSEPLAYLIST: player.sendCommand({PR_PLAY, request.payload});
         case CLOCK: 
-          if(_mode==PLAYER || _mode==SCREENSAVER) _time(request.payload==1); 
+          if(_mode==PLAYER || _mode==SCREENSAVER) _time(); 
           /*#ifdef USE_NEXTION
             if(_mode==TIMEZONE) nextion.localTime(network.timeinfo);
             if(_mode==INFO)     nextion.rssi();
@@ -623,7 +622,7 @@ void Display::_time(bool redraw) {
     //_clock->moveTo({clockConf.left, ft, 0});
     _clock->moveTo({lt, ft, 0});
   }
-  _clock->draw(redraw);
+  _clock->draw();
   /*#ifdef USE_NEXTION
     nextion.printClock(network.timeinfo);
   #endif*/

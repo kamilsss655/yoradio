@@ -3,10 +3,14 @@
 #include "dspcore.h"
 #include "../core/config.h"
 
+#ifndef DEF_SPI_FREQ
+  #define DEF_SPI_FREQ        8000000UL
+#endif
+
 #if DSP_HSPI
-  DspCore::DspCore(): ST7920(&SPI2, TFT_CS) {}
+  DspCore::DspCore(): ST7920(&SPI2, TFT_CS, DEF_SPI_FREQ) {}
 #else
-  DspCore::DspCore(): ST7920(&SPI, TFT_CS) {}
+  DspCore::DspCore(): ST7920(&SPI, TFT_CS, DEF_SPI_FREQ) {}
 #endif
 
 void DspCore::initDisplay() {

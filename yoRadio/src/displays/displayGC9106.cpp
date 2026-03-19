@@ -3,6 +3,10 @@
 #include "dspcore.h"
 #include "../core/config.h"
 
+#ifndef DEF_SPI_FREQ
+  #define DEF_SPI_FREQ        24000000      /*  set it to 0 for system default */
+#endif
+
 #if DSP_HSPI
 DspCore::DspCore(): Adafruit_GC9106Ex(&SPI2, TFT_DC, TFT_CS, TFT_RST) {}
 #else
@@ -10,7 +14,7 @@ DspCore::DspCore(): Adafruit_GC9106Ex(TFT_CS, TFT_DC, TFT_RST) {}
 #endif
 
 void DspCore::initDisplay() {
-  begin();
+  begin(DEF_SPI_FREQ);
   cp437(true);
   invert();
   flip();
