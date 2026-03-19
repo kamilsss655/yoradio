@@ -712,6 +712,7 @@ bool Audio::connecttohost(const char* host, const char* user, const char* pwd) {
         info(*this, evt_streamtitle, "");
         info(*this, evt_icydescription, "");
         info(*this, evt_icyurl, "");
+        if(audio_showstreamtitle) audio_showstreamtitle("");
     }
     xSemaphoreGiveRecursive(mutex_playAudioData);
     return res;
@@ -3316,6 +3317,7 @@ const char* Audio::parsePlaylist_PLS() {
         if (m_playlistContent[i].starts_with("Title1")) { // Title1=Antenne Tirol
             const char* plsStationName = (m_playlistContent[i].get() + 7);
             info(*this, evt_name, "%s", plsStationName);
+            // AUDIO_INFO("StationName: \"%s\"", plsStationName);
             continue;
         }
         if (m_playlistContent[i].starts_with("Length1")) { continue; }
@@ -3364,6 +3366,7 @@ const char* Audio::parsePlaylist_ASX() { // Advanced Stream Redirector
                 *(plsStationName + pos) = 0; // remove </Title>
             }
             info(*this, evt_name, "%s", plsStationName);
+            // AUDIO_INFO("StationName: \"%s\"", plsStationName);
         }
 
         if (m_playlistContent[i].starts_with("http") && !f_entry) { // url only in asx
@@ -4344,6 +4347,7 @@ bool Audio::parseHttpResponseHeader() { // this is the response to a GET / reque
             int sc = atoi(statusCode);
             if (sc > 310) { // e.g. HTTP/1.1 301 Moved Permanently
                 info(*this, evt_streamtitle, "%s", rhl.get());
+                if(audio_showstreamtitle) audio_showstreamtitle(rhl.get());
                 goto exit;
             }
         } else if (rhl.starts_with_icase("content-type:")) { // content-type: text/html; charset=UTF-8
@@ -4956,6 +4960,10 @@ void Audio::showstreamtitle(char* st) {
     }
 
     info(*this, evt_streamtitle, "%s", m_streamTitle.c_get());
+
+    if(audio_showstreamtitle) {
+        audio_showstreamtitle(m_streamTitle.c_get());
+    }
 }
 // —————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————
 void Audio::showCodecParams() {
@@ -5160,8 +5168,8 @@ int Audio::sendBytes(uint8_t* data, size_t len) {
     res = m_decoder->decode(data, &m_sbyt.bytesLeft, m_outBuff.get());
     bytesDecoded = len - m_sbyt.bytesLeft;
 
-    // if the last known bitrate has changed - send it to Yoradio (no more than once per second)
-    if (br > 0 && ((now - lastBitrateSendTime) > YORADIO_SYNC_MEDIUM) && br != lastBitrate) {
+    // send lastBitrate to Yoradio
+    if (br > 0 && ((now - lastBitrateSendTime) > YORADIO_SYNC_MEDIUM)) {
 
         lastBitrate = br;
         lastBitrateSendTime = now;
