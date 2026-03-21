@@ -1,3 +1,5 @@
+*2026 by https://github.com/kamilsss655*
+
 You can use these precompiled optimized (bigger receive buffer) network libraries for Arduino, or compile them yourself with this Docker image: https://hub.docker.com/r/espressif/esp32-arduino-lib-builder
   - if building manually provide the exact commit hash you current Arduino library is using (found in /home/username/.arduino15/packages/esp32/tools/esp32-libs/3.3.7/versions.txt)
 
